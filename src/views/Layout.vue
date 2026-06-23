@@ -69,7 +69,11 @@
         </div>
       </el-header>
       <el-main class="content-area">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <transition name="fade-slide" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
       </el-main>
     </el-container>
   </el-container>
@@ -151,5 +155,21 @@ const logout = () => {
 .content-area {
   padding: 20px;
   min-height: calc(100vh - 56px);
+}
+</style>
+
+<!-- 页面过渡动画（unscoped） -->
+<style>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 </style>
