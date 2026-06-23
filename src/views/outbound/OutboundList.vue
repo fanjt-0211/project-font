@@ -9,7 +9,7 @@
 
     <el-form :inline="true" :model="query" @submit.prevent="fetchData">
       <el-form-item label="出库单号">
-        <el-input v-model="query.outboundNo" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.outboundNo" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="类型">
         <el-select v-model="query.type" placeholder="全部" clearable style="width:120px">
@@ -29,7 +29,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="fetchData">查询</el-button>
-        <el-button @click="query = { pageNum: 1, pageSize: 10 }; fetchData()">重置</el-button>
+        <el-button @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -114,6 +114,12 @@ const materials = ref([])
 const warehouses = ref([])
 
 const query = reactive({ pageNum: 1, pageSize: 10 })
+
+const resetQuery = () => {
+  Object.keys(query).forEach(k => delete query[k])
+  Object.assign(query, { pageNum: 1, pageSize: 10 })
+  fetchData()
+}
 const form = reactive({ type: 1, materialId: null, warehouseId: null, quantity: 1, unitPrice: null, recipient: '', department: '', remark: '' })
 
 const rules = {
@@ -140,10 +146,12 @@ const openDialog = () => {
 const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
-  await addOutbound({ ...form })
-  ElMessage.success('出库成功')
-  dialogVisible.value = false
-  fetchData()
+  try {
+    await addOutbound({ ...form })
+    ElMessage.success('出库成功')
+    dialogVisible.value = false
+    fetchData()
+  } catch (e) { /* 错误已在拦截器中提示 */ }
 }
 
 onMounted(async () => {

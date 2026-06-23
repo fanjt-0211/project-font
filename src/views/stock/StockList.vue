@@ -20,7 +20,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="fetchData">查询</el-button>
-        <el-button @click="query = { pageNum: 1, pageSize: 10 }; fetchData()">重置</el-button>
+        <el-button @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -81,6 +81,12 @@ const materials = ref([])
 const warehouses = ref([])
 
 const query = reactive({ pageNum: 1, pageSize: 10 })
+
+const resetQuery = () => {
+  Object.keys(query).forEach(k => delete query[k])
+  Object.assign(query, { pageNum: 1, pageSize: 10 })
+  fetchData()
+}
 
 const fetchData = async () => {
   loading.value = true

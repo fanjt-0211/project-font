@@ -12,10 +12,10 @@
 
     <el-form :inline="true" :model="query" @submit.prevent="fetchData">
       <el-form-item label="物资编号">
-        <el-input v-model="query.code" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.code" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="物资名称">
-        <el-input v-model="query.name" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.name" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="分类">
         <el-select v-model="query.categoryId" placeholder="全部" clearable style="width:150px">
@@ -24,7 +24,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="fetchData">查询</el-button>
-        <el-button @click="query = { pageNum: 1, pageSize: 10 }; fetchData()">重置</el-button>
+        <el-button @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -146,6 +146,12 @@ const categories = ref([])
 const warnings = ref([])
 
 const query = reactive({ pageNum: 1, pageSize: 10 })
+
+const resetQuery = () => {
+  Object.keys(query).forEach(k => delete query[k])
+  Object.assign(query, { pageNum: 1, pageSize: 10 })
+  fetchData()
+}
 const form = reactive({
   id: null, code: '', name: '', categoryId: null, specification: '', unit: '',
   purchasePrice: null, sellPrice: null, minStock: 0, maxStock: 0, description: ''

@@ -10,10 +10,10 @@
     <!-- 搜索 -->
     <el-form :inline="true" :model="query" @submit.prevent="fetchData">
       <el-form-item label="用户名">
-        <el-input v-model="query.username" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.username" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="真实姓名">
-        <el-input v-model="query.realName" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.realName" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="角色">
         <el-select v-model="query.role" placeholder="全部" clearable style="width:120px">
@@ -23,7 +23,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="fetchData">查询</el-button>
-        <el-button @click="query = {}; fetchData()">重置</el-button>
+        <el-button @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -90,6 +90,11 @@ const isEdit = ref(false)
 const formRef = ref(null)
 
 const query = reactive({})
+
+const resetQuery = () => {
+  Object.keys(query).forEach(k => delete query[k])
+  fetchData()
+}
 const form = reactive({
   id: null,
   username: '',

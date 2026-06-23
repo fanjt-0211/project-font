@@ -9,13 +9,13 @@
 
     <el-form :inline="true" :model="query" @submit.prevent="fetchData">
       <el-form-item label="仓库编号">
-        <el-input v-model="query.code" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.code" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="仓库名称">
-        <el-input v-model="query.name" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.name" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="位置">
-        <el-input v-model="query.location" placeholder="模糊搜索" clearable />
+        <el-input v-model="query.location" placeholder="" clearable />
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="query.status" placeholder="全部" clearable style="width:100px">
@@ -25,7 +25,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="fetchData">查询</el-button>
-        <el-button @click="query = {}; fetchData()">重置</el-button>
+        <el-button @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -88,6 +88,11 @@ const isEdit = ref(false)
 const formRef = ref(null)
 
 const query = reactive({})
+
+const resetQuery = () => {
+  Object.keys(query).forEach(k => delete query[k])
+  fetchData()
+}
 const form = reactive({ id: null, code: '', name: '', location: '', capacity: 0, description: '' })
 
 const rules = {
