@@ -23,13 +23,24 @@
       </el-form-item>
     </el-form>
 
-    <el-table :data="records" stripe v-loading="loading" style="width:100%">
+    <el-table :data="pagedRecords" :row-class-name="tableRowClassName" v-loading="loading" style="width:100%">
       <el-table-column type="index" :index="indexMethod" label="序号" width="60" align="center" />
-      <el-table-column prop="name" label="分类名称" />
-      <el-table-column prop="description" label="描述" show-overflow-tooltip />
-      <el-table-column prop="parentName" label="归属" align="center">
+      <el-table-column label="分类名称">
         <template #default="{ row }">
-          <span v-if="row.parentName">{{ row.parentName }}</span>
+          <span v-if="row._isParent" class="parent-name">{{ row.name }}</span>
+          <span v-else-if="row._isOrphan" class="orphan-name">{{ row.name }}</span>
+          <span v-else class="child-name">
+            <span class="tree-prefix">├─</span>{{ row.name }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="description" label="描述" show-overflow-tooltip />
+      <el-table-column label="归属" align="center" width="100">
+        <template #default="{ row }">
+          <span v-if="!row._isParent && row.parentName">
+            {{ row.parentName }}
+            <el-tag v-if="row._isOrphan" size="small" type="info" style="margin-left:4px">?</el-tag>
+          </span>
           <span v-else style="color:#c0c4cc">—</span>
         </template>
       </el-table-column>
@@ -48,9 +59,10 @@
     </el-table>
 
     <el-pagination
-      v-model:current-page="query.pageNum" v-model:page-size="query.pageSize"
-      :total="total" :page-sizes="[10, 20, 50]" layout="total, sizes, prev, pager, next"
-      @current-change="fetchData" @size-change="fetchData" style="margin-top:16px;justify-content:flex-end"
+      v-model:current-page="currentPage" v-model:page-size="pageSize"
+      :total="groupedRecords.length" :page-sizes="[10, 20, 50]" layout="total, sizes, prev, pager, next"
+      @current-change="handlePageChange" @size-change="handlePageChange"
+      style="margin-top:16px;justify-content:flex-end"
     />
 
     <el-dialog :title="isEdit ? '编辑分类' : '新增分类'" v-model="dialogVisible" width="500px">
@@ -79,27 +91,90 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCategoryList, addCategory, updateCategory, updateCategoryStatus } from '@/api/category'
 
-const records = ref([])
-const total = ref(0)
+const rawRecords = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
 const allCategories = ref([])
+const currentPage = ref(1)
+const pageSize = ref(10)
 
-const query = reactive({ pageNum: 1, pageSize: 10 })
+const query = reactive({ pageNum: 1, pageSize: 999 })
 
 const resetQuery = () => {
   Object.keys(query).forEach(k => delete query[k])
-  Object.assign(query, { pageNum: 1, pageSize: 10 })
+  Object.assign(query, { pageNum: 1, pageSize: 999 })
+  currentPage.value = 1
   fetchData()
 }
+
+const groupedRecords = computed(() => {
+  const list = rawRecords.value
+  if (!list || list.length === 0) return []
+  // A category is top-level when parentId is null, undefined, 0, or empty string
+  const isTopLevel = (item) => {
+    const pid = item.parentId
+    return pid == null || pid === 0 || pid === ''
+  }
+  // Separate top-level categories and build children map
+  const childrenMap = {}
+  const parents = []
+  list.forEach(item => {
+    if (isTopLevel(item)) {
+      parents.push(item)
+    } else {
+      if (!childrenMap[item.parentId]) childrenMap[item.parentId] = []
+      childrenMap[item.parentId].push(item)
+    }
+  })
+  // Sort parents by sortOrder
+  parents.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+  // Build result: each parent followed by its sorted children
+  const result = []
+  const parentIds = new Set(parents.map(p => p.id))
+  parents.forEach(parent => {
+    result.push({ ...parent, _isParent: true })
+    const children = childrenMap[parent.id] || []
+    children.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    children.forEach(child => result.push({ ...child, _isParent: false }))
+  })
+  // Handle orphans: children whose parent is not in the dataset (e.g., parent filtered out by search)
+  const orphans = []
+  list.forEach(item => {
+    if (!isTopLevel(item) && !parentIds.has(item.parentId)) {
+      orphans.push(item)
+    }
+  })
+  if (orphans.length > 0) {
+    orphans.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+    orphans.forEach(child => result.push({ ...child, _isParent: false, _isOrphan: true }))
+  }
+  return result
+})
+
+// Frontend pagination: slice the grouped records
+const pagedRecords = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return groupedRecords.value.slice(start, start + pageSize.value)
+})
+
 const indexMethod = (index) => {
-  return (query.pageNum - 1) * query.pageSize + index + 1
+  return (currentPage.value - 1) * pageSize.value + index + 1
+}
+
+const handlePageChange = () => {
+  // currentPage / pageSize are already updated by v-model
+}
+
+const tableRowClassName = ({ row }) => {
+  if (row._isParent) return 'parent-row'
+  if (row._isOrphan) return 'orphan-row'
+  return 'child-row'
 }
 const form = reactive({ id: null, name: '', description: '', parentId: null, sortOrder: 0 })
 
@@ -109,8 +184,7 @@ const fetchData = async () => {
   loading.value = true
   try {
     const res = await getCategoryList(query)
-    records.value = res.data.records
-    total.value = res.data.total
+    rawRecords.value = res.data.records
   } finally { loading.value = false }
 }
 
@@ -123,6 +197,8 @@ const openDialog = (row) => {
   if (row) {
     isEdit.value = true
     Object.assign(form, row)
+    delete form._isParent
+    delete form._isOrphan
   } else {
     isEdit.value = false
     Object.assign(form, { id: null, name: '', description: '', parentId: null, sortOrder: 0 })
@@ -160,3 +236,33 @@ const toggleStatus = async (row) => {
 
 onMounted(fetchData)
 </script>
+
+<style scoped>
+:deep(.parent-row) {
+  background-color: #f5f7fa;
+}
+:deep(.parent-row) td {
+  border-top: 2px solid #e4e7ed !important;
+}
+:deep(.parent-row:first-child) td {
+  border-top: none !important;
+}
+:deep(.orphan-row) {
+  background-color: #fdf6ec;
+}
+.parent-name {
+  font-weight: 600;
+}
+.orphan-name {
+  padding-left: 8px;
+  color: #909399;
+}
+.child-name {
+  padding-left: 8px;
+}
+.tree-prefix {
+  color: #c0c4cc;
+  margin-right: 6px;
+  font-family: monospace;
+}
+</style>
