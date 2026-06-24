@@ -25,7 +25,7 @@
     </el-form>
 
     <el-table :data="records" stripe v-loading="loading">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column type="index" :index="indexMethod" label="序号" width="60" />
       <el-table-column prop="materialCode" label="物资编号" />
       <el-table-column prop="materialName" label="物资名称" />
       <el-table-column prop="specification" label="规格" />
@@ -45,7 +45,7 @@
     <el-pagination
       v-model:current-page="query.pageNum" v-model:page-size="query.pageSize"
       :total="total" :page-sizes="[10, 20, 50]" layout="total, sizes, prev, pager, next"
-      @change="fetchData" style="margin-top:16px;justify-content:flex-end"
+      @current-change="fetchData" @size-change="fetchData" style="margin-top:16px;justify-content:flex-end"
     />
 
     <!-- 预警弹窗 -->
@@ -86,6 +86,9 @@ const resetQuery = () => {
   Object.keys(query).forEach(k => delete query[k])
   Object.assign(query, { pageNum: 1, pageSize: 10 })
   fetchData()
+}
+const indexMethod = (index) => {
+  return (query.pageNum - 1) * query.pageSize + index + 1
 }
 
 const fetchData = async () => {

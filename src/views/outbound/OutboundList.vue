@@ -3,7 +3,7 @@
     <template #header>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span>出库记录</span>
-        <el-button type="primary" @click="openDialog()">新增出库</el-button>
+        <el-button type="warning" @click="openDialog()">出库</el-button>
       </div>
     </template>
 
@@ -34,7 +34,7 @@
     </el-form>
 
     <el-table :data="records" stripe v-loading="loading">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column type="index" :index="indexMethod" label="序号" width="60" />
       <el-table-column prop="outboundNo" label="出库单号" width="160" />
       <el-table-column prop="typeName" label="类型" />
       <el-table-column prop="materialName" label="物资" />
@@ -45,17 +45,16 @@
       <el-table-column prop="recipient" label="接收人" />
       <el-table-column prop="department" label="部门" />
       <el-table-column prop="operatorName" label="操作员" />
-      <el-table-column prop="statusName" label="状态" />
     </el-table>
 
     <el-pagination
       v-model:current-page="query.pageNum" v-model:page-size="query.pageSize"
       :total="total" :page-sizes="[10, 20, 50]" layout="total, sizes, prev, pager, next"
-      @change="fetchData" style="margin-top:16px;justify-content:flex-end"
+      @current-change="fetchData" @size-change="fetchData" style="margin-top:16px;justify-content:flex-end"
     />
 
     <!-- 新增出库弹窗 -->
-    <el-dialog title="新增出库" v-model="dialogVisible" width="500px">
+    <el-dialog title="出库" v-model="dialogVisible" width="500px">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
         <el-form-item label="出库类型" prop="type">
           <el-select v-model="form.type" style="width:100%">
@@ -119,6 +118,9 @@ const resetQuery = () => {
   Object.keys(query).forEach(k => delete query[k])
   Object.assign(query, { pageNum: 1, pageSize: 10 })
   fetchData()
+}
+const indexMethod = (index) => {
+  return (query.pageNum - 1) * query.pageSize + index + 1
 }
 const form = reactive({ type: 1, materialId: null, warehouseId: null, quantity: 1, unitPrice: null, recipient: '', department: '', remark: '' })
 

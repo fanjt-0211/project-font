@@ -3,7 +3,7 @@
     <template #header>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span>用户列表</span>
-        <el-button type="primary" @click="openDialog()">新增用户</el-button>
+        <el-button type="success" @click="openDialog()">新增用户</el-button>
       </div>
     </template>
 
@@ -12,10 +12,10 @@
       <el-form-item label="用户名">
         <el-input v-model="query.username" placeholder="" clearable />
       </el-form-item>
-      <el-form-item label="真实姓名">
+      <el-form-item label="姓名">
         <el-input v-model="query.realName" placeholder="" clearable />
       </el-form-item>
-      <el-form-item label="角色">
+      <el-form-item label="身份">
         <el-select v-model="query.role" placeholder="全部" clearable style="width:120px">
           <el-option label="管理员" :value="1" />
           <el-option label="普通用户" :value="2" />
@@ -28,12 +28,12 @@
     </el-form>
 
     <el-table :data="list" stripe v-loading="loading">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column type="index" label="序号" width="60" />
       <el-table-column prop="username" label="用户名" />
-      <el-table-column prop="realName" label="真实姓名" />
+      <el-table-column prop="realName" label="姓名" />
       <el-table-column prop="phone" label="手机号" />
       <el-table-column prop="email" label="邮箱" />
-      <el-table-column prop="roleName" label="角色" />
+      <el-table-column prop="roleName" label="身份" />
       <el-table-column prop="status" label="状态" width="80">
         <template #default="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '启用' : '禁用' }}</el-tag>
@@ -42,7 +42,7 @@
       <el-table-column label="操作" width="180">
         <template #default="{ row }">
           <el-button size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button size="small" :type="row.status === 1 ? 'warning' : 'success'"
+          <el-button size="small" :type="row.status === 1 ? 'danger' : 'success'"
             @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
         </template>
       </el-table-column>
@@ -52,9 +52,9 @@
     <el-dialog :title="isEdit ? '编辑用户' : '新增用户'" v-model="dialogVisible" width="500px">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
         <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" :disabled="isEdit" />
+          <el-input v-model="form.username" />
         </el-form-item>
-        <el-form-item label="真实姓名" prop="realName">
+        <el-form-item label="姓名" prop="realName">
           <el-input v-model="form.realName" />
         </el-form-item>
         <el-form-item label="手机号">
@@ -63,7 +63,7 @@
         <el-form-item label="邮箱">
           <el-input v-model="form.email" />
         </el-form-item>
-        <el-form-item label="角色">
+        <el-form-item label="身份">
           <el-select v-model="form.role" style="width:100%">
             <el-option label="管理员" :value="1" />
             <el-option label="普通用户" :value="2" />
@@ -106,7 +106,7 @@ const form = reactive({
 
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }]
+  realName: [{ required: true, message: '请输入姓名', trigger: 'blur' }]
 }
 
 const fetchData = async () => {
@@ -133,15 +133,17 @@ const openDialog = (row) => {
 const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
-  if (isEdit.value) {
-    await updateUser({ id: form.id, username: form.username, realName: form.realName, phone: form.phone, email: form.email, role: form.role })
-    ElMessage.success('修改成功')
-  } else {
-    await addUser({ username: form.username, realName: form.realName, phone: form.phone, email: form.email, role: form.role })
-    ElMessage.success('新增成功')
-  }
-  dialogVisible.value = false
-  fetchData()
+  try {
+    if (isEdit.value) {
+      await updateUser({ id: form.id, username: form.username, realName: form.realName, phone: form.phone, email: form.email, role: form.role })
+      ElMessage.success('修改成功')
+    } else {
+      await addUser({ username: form.username, realName: form.realName, phone: form.phone, email: form.email, role: form.role })
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e) { /* 错误已在拦截器中提示 */ }
 }
 
 const toggleStatus = async (row) => {

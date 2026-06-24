@@ -3,7 +3,7 @@
     <template #header>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span>仓库列表</span>
-        <el-button type="primary" @click="openDialog()">新增仓库</el-button>
+        <el-button type="success" @click="openDialog()">新增仓库</el-button>
       </div>
     </template>
 
@@ -30,7 +30,7 @@
     </el-form>
 
     <el-table :data="list" stripe v-loading="loading">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column type="index" label="序号" width="60" />
       <el-table-column prop="code" label="仓库编号" />
       <el-table-column prop="name" label="仓库名称" />
       <el-table-column prop="location" label="位置" />
@@ -44,7 +44,7 @@
       <el-table-column label="操作" width="180">
         <template #default="{ row }">
           <el-button size="small" @click="openDialog(row)">编辑</el-button>
-          <el-button size="small" :type="row.status === 1 ? 'warning' : 'success'"
+          <el-button size="small" :type="row.status === 1 ? 'danger' : 'success'"
             @click="toggleStatus(row)">{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
         </template>
       </el-table-column>
@@ -122,15 +122,17 @@ const openDialog = (row) => {
 const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
-  if (isEdit.value) {
-    await updateWarehouse(form.id, { code: form.code, name: form.name, location: form.location, capacity: form.capacity, description: form.description })
-    ElMessage.success('修改成功')
-  } else {
-    await addWarehouse({ code: form.code, name: form.name, location: form.location, capacity: form.capacity, description: form.description })
-    ElMessage.success('新增成功')
-  }
-  dialogVisible.value = false
-  fetchData()
+  try {
+    if (isEdit.value) {
+      await updateWarehouse(form.id, { code: form.code, name: form.name, location: form.location, capacity: form.capacity, description: form.description })
+      ElMessage.success('修改成功')
+    } else {
+      await addWarehouse({ code: form.code, name: form.name, location: form.location, capacity: form.capacity, description: form.description })
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e) { /* 错误已在拦截器中提示 */ }
 }
 
 const toggleStatus = async (row) => {

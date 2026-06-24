@@ -4,8 +4,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span>物资列表</span>
         <div>
-          <el-button type="warning" @click="showWarning">低库存预警</el-button>
-          <el-button type="primary" @click="openDialog()">新增物资</el-button>
+          <el-button type="success" @click="openDialog()">新增物资</el-button>
         </div>
       </div>
     </template>
@@ -29,7 +28,7 @@
     </el-form>
 
     <el-table :data="records" stripe v-loading="loading">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column type="index" :index="indexMethod" label="序号" width="60" />
       <el-table-column prop="code" label="物资编号" />
       <el-table-column prop="name" label="物资名称" />
       <el-table-column prop="categoryName" label="分类" />
@@ -48,7 +47,7 @@
     <el-pagination
       v-model:current-page="query.pageNum" v-model:page-size="query.pageSize"
       :total="total" :page-sizes="[10, 20, 50]" layout="total, sizes, prev, pager, next"
-      @change="fetchData" style="margin-top:16px;justify-content:flex-end"
+      @current-change="fetchData" @size-change="fetchData" style="margin-top:16px;justify-content:flex-end"
     />
 
     <!-- 弹窗 -->
@@ -116,34 +115,22 @@
         <el-button type="primary" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
-
-    <!-- 预警弹窗 -->
-    <el-dialog title="低库存预警" v-model="warningVisible" width="700px">
-      <el-table :data="warnings" stripe empty-text="暂无预警物资">
-        <el-table-column prop="code" label="编号" />
-        <el-table-column prop="name" label="名称" />
-        <el-table-column prop="categoryName" label="分类" />
-        <el-table-column prop="minStock" label="最低库存" />
-      </el-table>
-    </el-dialog>
   </el-card>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getMaterialList, addMaterial, updateMaterial, getMaterialWarning } from '@/api/material'
+import { getMaterialList, addMaterial, updateMaterial } from '@/api/material'
 import { getCategoryList } from '@/api/category'
 
 const records = ref([])
 const total = ref(0)
 const loading = ref(false)
 const dialogVisible = ref(false)
-const warningVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
 const categories = ref([])
-const warnings = ref([])
 
 const query = reactive({ pageNum: 1, pageSize: 10 })
 
@@ -151,6 +138,9 @@ const resetQuery = () => {
   Object.keys(query).forEach(k => delete query[k])
   Object.assign(query, { pageNum: 1, pageSize: 10 })
   fetchData()
+}
+const indexMethod = (index) => {
+  return (query.pageNum - 1) * query.pageSize + index + 1
 }
 const form = reactive({
   id: null, code: '', name: '', categoryId: null, specification: '', unit: '',
@@ -188,27 +178,23 @@ const openDialog = (row) => {
 const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
-  const payload = { ...form }
-  if (isEdit.value) {
-    await updateMaterial(form.id, payload)
-    ElMessage.success('修改成功')
-  } else {
-    await addMaterial(payload)
-    ElMessage.success('新增成功')
-  }
-  dialogVisible.value = false
-  fetchData()
-}
-
-const showWarning = async () => {
-  const res = await getMaterialWarning()
-  warnings.value = res.data
-  warningVisible.value = true
+  try {
+    const payload = { ...form }
+    if (isEdit.value) {
+      await updateMaterial(form.id, payload)
+      ElMessage.success('修改成功')
+    } else {
+      await addMaterial(payload)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    fetchData()
+  } catch (e) { /* 错误已在拦截器中提示 */ }
 }
 
 onMounted(async () => {
   fetchData()
   const res = await getCategoryList()
-  categories.value = res.data
+  categories.value = res.data.records
 })
 </script>
